@@ -7,45 +7,43 @@ from keras.models import Sequential
 from keras.layers import Dense, LSTM, Dropout
 from datetime import datetime
 
-# Download stock data
+# Download historical stock data using the yfinance library.
 end = datetime.now()
 start = datetime(end.year - 20, end.month, end.day)
 stock = "GOOG"
 google_data = yf.download(stock, start, end)
 
-# Check for and handle missing values
-google_data.fillna(method='ffill', inplace=True)  # Forward-fill to handle NaNs
+# Check for and handle missing values in the dataset.
+google_data.ffill()  # Forward-fill to handle missing values.
 
-# Plot adjusted closing price
-plt.figure(figsize=(15, 5))
-google_data['Adj Close'].plot(title="Adjusted Close Price of Google")
+# Plot the adjusted closing price of the stock to visualize its trend.
+google_data['Adj Close'].plot(title="Adjusted Closing Price of Google")
 plt.xlabel("Years")
-plt.ylabel("Adjusted Close")
+plt.ylabel("Adj Close")
 plt.show()
 
 # Function to plot columns
 def plot_graph(data, column_name):
-    data[column_name].plot(figsize=(15, 5), title=f"{column_name} of Google data")
+    data[column_name].plot(figsize=(12, 5), title=f"{column_name} of Google data")
     plt.xlabel("Years")
     plt.ylabel(column_name)
     plt.show()
 
-# Moving Averages
+# Calculated the moving averages to smooth out price data.
 google_data['MA_for_100_days'] = google_data['Adj Close'].rolling(100).mean()
 google_data['MA_for_250_days'] = google_data['Adj Close'].rolling(250).mean()
 
 # Plot adjusted close price with moving averages
-plt.figure(figsize=(15, 5))
-google_data[['Adj Close', 'MA_for_100_days', 'MA_for_250_days']].plot(title="Adjusted Close Price with Moving Averages")
+google_data[['Adj Close', 'MA_for_100_days', 'MA_for_250_days']].plot(title="Adjusted Closing Price with Moving Averages")
 plt.xlabel("Years")
 plt.ylabel("Price")
 plt.show()
 
-# Percentage change in adjusted close price
+# To analyze the price change, I calculate the percentage change in the adjusted close price.
 google_data['percentage_change_cp'] = google_data['Adj Close'].pct_change()
 plot_graph(google_data, 'percentage_change_cp')
 
-# Scale the Adjusted Close Price data
+# Scale the adjusted close price data to prepare it for the LSTM model.
 Adj_close_price = google_data[['Adj Close']].astype(float)
 scaler = MinMaxScaler(feature_range=(0, 1))
 scaled_data = scaler.fit_transform(Adj_close_price)
@@ -83,12 +81,12 @@ model.fit(x_train, y_train, batch_size=32, epochs=1)  # Increase batch size, red
 # Summarize the model
 model.summary()
 
-# Predictions
+# After training, I make predictions and invert the scaling.
 predictions = model.predict(x_test)
 inv_predictions = scaler.inverse_transform(predictions)
 inv_y_test = scaler.inverse_transform(y_test.reshape(-1, 1))
 
-# Calculate Root Mean Squared Error (RMSE)
+# Calculate the Root Mean Squared Error (RMSE) to assess model performance.
 rmse = np.sqrt(np.mean((inv_predictions - inv_y_test) ** 2))
 print("RMSE:", rmse)
 
@@ -98,14 +96,14 @@ plot_data = pd.DataFrame({
     'Predictions': inv_predictions.flatten()
 }, index=google_data.index[split_len + 100:])
 
-plot_data.plot(figsize=(15, 6), title="Actual vs Predicted Prices")
+plot_data.plot(figsize=(12, 6), title="Actual vs Predicted Prices")
 plt.xlabel("Years")
 plt.ylabel("Adjusted Close Price")
 plt.show()
 
 # Plot the whole data series
 combined_data = pd.concat([Adj_close_price[:split_len+100], plot_data], axis=0)
-combined_data.plot(figsize=(15, 6), title="Full Data with Predictions")
+combined_data.plot(figsize=(12, 6), title="Full Data with Predictions")
 plt.xlabel("Years")
 plt.ylabel("Adjusted Close Price")
 plt.show()
